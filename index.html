@@ -14,13 +14,13 @@
             theme: {
                 extend: {
                     colors: {
-                        "primary": "#4d82bc", 
-                        "secondary": "#d8af97",
-                        "vibrant-pink": "#84b6f4", 
-                        "vibrant-cyan": "#c4dafa",
-                        "vibrant-green": "#ecd6c0",
-                        "midnight": "#030712",
-                        "card-dark": "#0f172a"
+                        "primary": "#0EA5E9", // Azul Cielo (Sky 500)
+                        "secondary": "#000000", // Negro
+                        "vibrant-pink": "#0369A1", // Azul oscuro (Sky 700)
+                        "vibrant-cyan": "#FFFFFF", // Blanco
+                        "vibrant-green": "#0EA5E9",
+                        "midnight": "#000000",
+                        "card-dark": "#0F0F0F"
                     },
                     fontFamily: {
                         "sans": ["Plus Jakarta Sans", "sans-serif"],
@@ -29,6 +29,9 @@
                     borderRadius: {
                         "4xl": "2rem",
                         "5xl": "3.5rem"
+                    },
+                    boxShadow: {
+                        "premium": "0 25px 50px -12px rgba(14, 165, 233, 0.15)"
                     }
                 }
             }
@@ -42,27 +45,27 @@
         
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background: #f1f5f9;
-            color: #0f172a;
+            background: #FFFFFF;
+            color: #000000;
         }
-        .dark body { background: #030712; color: #f8fafc; }
+        .dark body { background: #000000; color: #FFFFFF; }
 
         .glass-card {
-            background: rgba(255, 255, 255, 0.02);
+            background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(14, 165, 233, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3);
         }
 
-        .neon-border-gold { border: 1px solid rgba(216, 175, 151, 0.3); box-shadow: 0 0 20px rgba(216, 175, 151, 0.1); }
+        .neon-border-gold { border: 1px solid rgba(14, 165, 233, 0.3); box-shadow: 0 0 20px rgba(14, 165, 233, 0.05); }
         
         .text-vivid-gradient {
-            background: linear-gradient(to right, #4d82bc, #84b6f4, #d8af97);
+            background: linear-gradient(to right, #000000, #0EA5E9, #0369A1);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
         .dark .text-vivid-gradient {
-            background: linear-gradient(to right, #c4dafa, #84b6f4, #ecd6c0);
+            background: linear-gradient(to right, #FFFFFF, #0EA5E9, #7DD3FC);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -80,20 +83,44 @@
             width: 50px;
             height: 50px;
             border-radius: 50%;
-            background: conic-gradient(#0000 10%, #4d82bc);
+            background: conic-gradient(#0000 10%, #0EA5E9);
             -webkit-mask: radial-gradient(farthest-side, #0000 calc(100% - 8px), #000 0);
             animation: s3 1s infinite linear;
         }
         @keyframes s3 { to { transform: rotate(1turn); } }
 
         .gold-glow {
-            box-shadow: 0 0 30px rgba(216, 175, 151, 0.2);
+            box-shadow: 0 0 30px rgba(14, 165, 233, 0.2);
         }
         .text-gold-gradient {
-            background: linear-gradient(to br, #d8af97, #ecd6c0);
+            background: linear-gradient(to br, #0EA5E9, #FFFFFF);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #0369A1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #0EA5E9;
+        }
+
+        /* Estilos específicos para asegurar legibilidad en blanco/negro/azul cielo */
+        .bg-primary { background-color: #0EA5E9 !important; }
+        .text-primary { color: #0EA5E9 !important; }
+        .border-primary { border-color: #0EA5E9 !important; }
+        
+        .bg-secondary { background-color: #000000 !important; color: #FFFFFF !important; }
+        .text-secondary { color: #0EA5E9 !important; }
+        
+        .dark .bg-secondary { background-color: #FFFFFF !important; color: #000000 !important; }
     </style>
 <script type="importmap">
 {

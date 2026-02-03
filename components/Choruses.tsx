@@ -1,14 +1,16 @@
 
-import React, { useState, useRef, useMemo } from 'react';
-import { Member, Role, ChoirData, User } from '../types';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
+import { Member, Role, ChoirData, User, AttendanceRecord } from '../types';
 
 interface ChorusesProps {
   members: Member[];
   choirs: ChoirData[];
   directors: User[];
+  reports: AttendanceRecord[]; 
   onAddMember: (member: Member) => void;
   onDeleteMember: (id: string) => void;
   onUpdateChoirPhoto: (choirId: string, photoUrl: string) => void;
+  onViewMember: (member: Member) => void;
   userRole: Role;
   userChoirId?: string;
 }
@@ -17,47 +19,98 @@ const Choruses: React.FC<ChorusesProps> = ({
   members, 
   choirs,
   directors,
+  reports,
   onAddMember, 
   onDeleteMember, 
   onUpdateChoirPhoto,
+  onViewMember,
   userRole, 
   userChoirId 
 }) => {
   const isAdmin = userRole === Role.ADMIN;
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedChoirId, setSelectedChoirId] = useState<string | null>(null);
+  const choirPhotoInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isAdmin) {
+      setSelectedChoirId(userChoirId || null);
+    } else {
+      setSelectedChoirId(userChoirId || choirs[0]?.id || null);
+    }
+  }, [userChoirId, isAdmin, choirs]);
   
-  const currentChoirId = isAdmin ? (userChoirId || choirs[0].id) : userChoirId;
-  const currentChoir = choirs.find(c => c.id === currentChoirId);
+  const getRealAttendance = (choirId: string) => {
+    const choirMembers = members.filter(m => m.choirId === choirId);
+    const choirMemberIds = new Set(choirMembers.map(m => m.id));
+    const choirReports = reports.filter(r => choirMemberIds.has(r.memberId));
+    if (choirReports.length === 0) return 0;
+    return Math.round((choirReports.filter(r => r.present).length / choirReports.length) * 100);
+  };
 
-  const choirDirector = useMemo(() => {
-    return directors.find(d => d.choirId === currentChoirId);
-  }, [directors, currentChoirId]);
-
+  const filteredChoirs = useMemo(() => choirs.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase())), [choirs, searchTerm]);
+  const currentChoir = choirs.find(c => c.id === selectedChoirId);
+  const currentMembers = members.filter(m => m.choirId === selectedChoirId);
+  const currentDirector = useMemo(() => directors.find(d => d.choirId === selectedChoirId), [directors, selectedChoirId]);
+  
   const [formData, setFormData] = useState({ 
     firstName: '', 
     lastName: '', 
     email: '', 
-    choirId: currentChoirId || '',
-    voiceType: 'Soprano' as Member['voiceType'],
-    gender: 'Mujer' as Member['gender']
+    voiceType: 'Soprano' as Member['voiceType'], 
+    gender: 'Mujer' as Member['gender'] 
   });
 
   const getVoiceColor = (voice: string) => {
     switch(voice) {
-      case 'Soprano': return 'from-[#84b6f4] to-[#4d82bc] shadow-blue-400/20';
-      case 'Contralto': return 'from-[#c4dafa] to-[#84b6f4] shadow-blue-200/20';
-      case 'Tenor': return 'from-[#d8af97] to-[#84b6f4] shadow-tan-400/20';
-      case 'Bajo': return 'from-[#4d82bc] to-[#0f172a] shadow-primary/20';
+      case 'Soprano': return 'from-primary/80 to-primary';
+      case 'Contralto': return 'from-sky-600 to-primary';
+      case 'Tenor': return 'from-secondary/60 to-secondary';
+      case 'Bajo': return 'from-black to-slate-800';
+      case 'Por asignar': return 'from-slate-300 to-slate-400';
       default: return 'from-slate-400 to-slate-600';
     }
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Compresión mejorada para máxima seguridad de datos (Calidad 0.4)
+  const compressImage = (base64: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = base64;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 800; // Reducido para mayor ahorro de espacio
+        const MAX_HEIGHT = 600;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.4)); // Calidad reducida para asegurar permanencia
+      };
+    });
+  };
+
+  const handleChoirPhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && currentChoirId) {
+    if (file && selectedChoirId) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        onUpdateChoirPhoto(currentChoirId, reader.result as string);
+      reader.onloadend = async () => {
+        const compressed = await compressImage(reader.result as string);
+        onUpdateChoirPhoto(selectedChoirId, compressed);
       };
       reader.readAsDataURL(file);
     }
@@ -65,222 +118,174 @@ const Choruses: React.FC<ChorusesProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.firstName || !formData.lastName) return;
-
-    const newMember: Member = {
-      id: crypto.randomUUID(),
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      email: formData.email || `${formData.firstName.toLowerCase()}@esperanza.com`,
-      choirId: isAdmin ? formData.choirId : (userChoirId || ''),
-      voiceType: formData.voiceType,
-      gender: formData.gender
-    };
-
-    onAddMember(newMember);
+    if (!formData.firstName || !formData.lastName || !selectedChoirId) return;
+    onAddMember({ 
+        id: crypto.randomUUID(), 
+        firstName: formData.firstName, 
+        lastName: formData.lastName, 
+        email: formData.email || `${formData.firstName.toLowerCase()}@esperanza.com`, 
+        choirId: selectedChoirId, 
+        voiceType: formData.voiceType, 
+        gender: formData.gender 
+    });
     setFormData({ ...formData, firstName: '', lastName: '', email: '' });
   };
 
-  return (
-    <div className="animate-in fade-in zoom-in-95 duration-700 space-y-8 lg:space-y-12">
-      {/* Banner Principal - Responsivo */}
-      <div className="relative h-64 lg:h-80 w-full rounded-3xl lg:rounded-[4rem] overflow-hidden shadow-2xl group border-4 border-white dark:border-white/5">
-        {currentChoir?.imageUrl ? (
-          <img 
-            src={currentChoir.imageUrl} 
-            className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" 
-            alt={currentChoir.name} 
-          />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-br from-slate-200 to-slate-300 dark:from-card-dark dark:to-midnight flex flex-col items-center justify-center text-slate-400 p-6 text-center">
-             <span className="material-symbols-outlined text-6xl lg:text-8xl mb-4">church</span>
-             <p className="font-black uppercase tracking-widest text-[10px] lg:text-sm">Sin fotografía de la sede</p>
+  if (isAdmin && !selectedChoirId) {
+    return (
+      <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 space-y-4 lg:space-y-10">
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-3">
+          <div className="space-y-0 lg:space-y-2">
+            <h2 className="text-xl lg:text-5xl font-black tracking-tighter text-slate-900 dark:text-white uppercase leading-none text-center md:text-left">Sedes <span className="text-primary">Portal</span></h2>
+            <p className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest text-[7px] lg:text-sm text-center md:text-left">Gestión de Unidades Corales</p>
           </div>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div>
-        <div className="absolute bottom-6 left-6 lg:bottom-10 lg:left-12 flex flex-col lg:flex-row lg:items-end gap-6 lg:gap-10 w-full pr-12 lg:pr-24">
-          <div className="flex flex-col gap-1">
-             <span className="text-secondary font-black uppercase tracking-[0.4em] text-[8px] lg:text-[10px] drop-shadow-md flex items-center gap-2">
-                <span className="size-2 bg-emerald-500 rounded-full animate-pulse"></span>
-                Sede Activa
-             </span>
-             <h2 className="text-3xl lg:text-6xl font-black tracking-tighter text-white uppercase leading-none drop-shadow-2xl">
-                <span className="text-vivid-gradient">{currentChoir?.name || '---'}</span>
-             </h2>
+          <div className="relative group w-full md:w-80">
+            <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs lg:text-base">search</span>
+            <input type="text" placeholder="Buscar sede..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-white dark:bg-card-dark border border-slate-200 dark:border-white/5 rounded-lg py-1.5 lg:py-4 pl-8 pr-3 text-[10px] font-bold text-slate-900 dark:text-white focus:ring-1 focus:ring-primary/20" />
           </div>
-          <div className="flex items-center gap-4 lg:gap-6 bg-white/10 backdrop-blur-xl p-4 lg:p-6 rounded-2xl lg:rounded-4xl border border-white/20 mb-1 max-w-max">
-             <div className="text-right">
-                <p className="text-[8px] lg:text-[9px] font-black text-white/60 uppercase tracking-widest">Gente</p>
-                <p className="text-lg lg:text-2xl font-black text-white">{members.length}</p>
-             </div>
-             <div className="size-1 w-px bg-white/20 h-6 lg:h-8"></div>
-             <div className="text-right">
-                <p className="text-[8px] lg:text-[9px] font-black text-white/60 uppercase tracking-widest">Director</p>
-                <p className="text-xs lg:text-sm font-black text-secondary uppercase tracking-tighter truncate max-w-[100px] lg:max-w-[150px]">{choirDirector?.name || 'Vacante'}</p>
-             </div>
-          </div>
+        </header>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {filteredChoirs.map((choir) => (
+            <div key={choir.id} onClick={() => setSelectedChoirId(choir.id)} className="bg-white dark:bg-card-dark rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm overflow-hidden cursor-pointer hover:scale-105 transition-all">
+              <div className="h-24 bg-slate-100 dark:bg-midnight flex items-center justify-center overflow-hidden">
+                {choir.imageUrl ? (
+                    <img src={choir.imageUrl} className="w-full h-full object-cover" alt={choir.name} />
+                ) : (
+                    <span className="material-symbols-outlined text-4xl text-slate-300">church</span>
+                )}
+              </div>
+              <div className="p-6">
+                <h4 className="text-sm font-black uppercase text-slate-900 dark:text-white">{choir.name}</h4>
+                <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-50 dark:border-white/5">
+                  <span className="text-xs font-black text-primary">{getRealAttendance(choir.id)}%</span>
+                  <span className="text-xs font-black text-slate-400">{members.filter(m => m.choirId === choir.id).length} Miembros</span>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="animate-in fade-in zoom-in-95 duration-700 space-y-8 pb-20">
+      <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
         {isAdmin && (
-          <div className="absolute top-4 right-4 lg:top-8 lg:right-8">
-             <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handlePhotoUpload} />
-             <button onClick={() => fileInputRef.current?.click()} className="size-12 lg:w-auto lg:h-auto lg:px-6 lg:py-3 bg-white/90 hover:bg-white text-midnight font-black rounded-2xl flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest transition-all shadow-xl active:scale-95">
-               <span className="material-symbols-outlined text-lg">add_a_photo</span>
-               <span className="hidden lg:inline">{currentChoir?.imageUrl ? 'Cambiar Foto' : 'Subir Foto'}</span>
-             </button>
-          </div>
+          <button onClick={() => setSelectedChoirId(null)} className="flex items-center gap-1 text-primary font-black uppercase text-[10px] tracking-widest hover:-translate-x-1 transition-transform ml-1">
+            <span className="material-symbols-outlined text-sm">arrow_back</span> Regresar a Sedes
+          </button>
         )}
       </div>
+      
+      <div className="relative h-48 lg:h-72 w-full rounded-[3rem] overflow-hidden shadow-lg border-4 border-white dark:border-white/5">
+        {currentChoir?.imageUrl ? (
+            <img src={currentChoir.imageUrl} className="absolute inset-0 w-full h-full object-cover" alt="Sede" />
+        ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-primary to-blue-900"></div>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+        <h2 className="absolute bottom-10 left-10 text-4xl lg:text-6xl font-black text-white uppercase tracking-tighter drop-shadow-2xl">{currentChoir?.name || '---'}</h2>
+        
+        {isAdmin && (
+          <button 
+            onClick={() => choirPhotoInputRef.current?.click()}
+            className="absolute top-8 right-8 size-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-white/20 transition-all shadow-xl"
+          >
+             <span className="material-symbols-outlined text-2xl">add_a_photo</span>
+          </button>
+        )}
+        <input type="file" ref={choirPhotoInputRef} className="hidden" accept="image/*" onChange={handleChoirPhotoChange} />
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
-        {/* Formulario de Registro */}
-        <div className="lg:col-span-4 order-2 lg:order-1">
-          <div className="bg-white dark:bg-card-dark p-6 lg:p-10 rounded-3xl lg:rounded-5xl shadow-2xl border border-slate-200 dark:border-white/5 sticky top-24">
-            <h3 className="text-[10px] lg:text-[11px] font-black text-primary dark:text-secondary uppercase tracking-[0.4em] mb-8 lg:mb-12 flex items-center gap-3">
-              <span className="material-symbols-outlined text-xl lg:text-2xl fill-1">person_add</span>
-              Nueva Inscripción
-            </h3>
-            <form onSubmit={handleSubmit} className="space-y-4 lg:space-y-6">
-              <input type="text" placeholder="Nombres" value={formData.firstName} onChange={(e) => setFormData({...formData, firstName: e.target.value})} className="w-full bg-slate-100 dark:bg-midnight border-none rounded-2xl p-4 lg:p-5 text-sm font-bold text-slate-900 dark:text-white focus:ring-4 focus:ring-primary/20 transition-all placeholder:text-slate-500" />
-              <input type="text" placeholder="Apellidos" value={formData.lastName} onChange={(e) => setFormData({...formData, lastName: e.target.value})} className="w-full bg-slate-100 dark:bg-midnight border-none rounded-2xl p-4 lg:p-5 text-sm font-bold text-slate-900 dark:text-white focus:ring-4 focus:ring-primary/20 transition-all placeholder:text-slate-500" />
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[8px] lg:text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 ml-2 tracking-widest">Voz</label>
-                  <select value={formData.voiceType} onChange={(e) => setFormData({...formData, voiceType: e.target.value as any})} className="w-full bg-slate-100 dark:bg-midnight border-none rounded-xl lg:rounded-2xl p-4 text-xs lg:text-sm font-bold text-slate-900 dark:text-white focus:ring-4 focus:ring-primary/20">
-                    <option>Soprano</option><option>Contralto</option><option>Tenor</option><option>Bajo</option>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="lg:col-span-4 bg-white dark:bg-card-dark p-10 rounded-[3rem] shadow-lg border border-slate-200 dark:border-white/5 h-fit">
+          <h3 className="text-[11px] font-black text-primary uppercase tracking-widest mb-8">Inscribir Integrante</h3>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+               <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1 mb-1 block">Identidad</label>
+               <input type="text" placeholder="Nombres" value={formData.firstName} onChange={(e) => setFormData({...formData, firstName: e.target.value})} className="w-full bg-slate-50 dark:bg-midnight border-none rounded-2xl p-4 text-xs font-bold text-slate-900 dark:text-white mb-3" />
+               <input type="text" placeholder="Apellidos" value={formData.lastName} onChange={(e) => setFormData({...formData, lastName: e.target.value})} className="w-full bg-slate-50 dark:bg-midnight border-none rounded-2xl p-4 text-xs font-bold text-slate-900 dark:text-white" />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+               <div>
+                  <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1 mb-1 block">Voz</label>
+                  <select value={formData.voiceType} onChange={(e) => setFormData({...formData, voiceType: e.target.value as any})} className="w-full bg-slate-50 dark:bg-midnight border-none rounded-2xl p-4 text-xs font-bold text-slate-900 dark:text-white">
+                    <option>Soprano</option>
+                    <option>Contralto</option>
+                    <option>Tenor</option>
+                    <option>Bajo</option>
+                    <option>Por asignar</option>
                   </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[8px] lg:text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 ml-2 tracking-widest">Género</label>
-                  <select value={formData.gender} onChange={(e) => setFormData({...formData, gender: e.target.value as any})} className="w-full bg-slate-100 dark:bg-midnight border-none rounded-xl lg:rounded-2xl p-4 text-xs lg:text-sm font-bold text-slate-900 dark:text-white focus:ring-4 focus:ring-primary/20">
+               </div>
+               <div>
+                  <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1 mb-1 block">Género</label>
+                  <select value={formData.gender} onChange={(e) => setFormData({...formData, gender: e.target.value as any})} className="w-full bg-slate-50 dark:bg-midnight border-none rounded-2xl p-4 text-xs font-bold text-slate-900 dark:text-white">
                     <option>Mujer</option><option>Hombre</option>
                   </select>
-                </div>
-              </div>
-              <button type="submit" className="w-full py-5 lg:py-6 bg-primary text-white font-black rounded-2xl lg:rounded-3xl hover:scale-[1.03] active:scale-95 shadow-2xl transition-all uppercase tracking-[0.2em] text-[10px] lg:text-[12px] mt-2">Registrar Miembro</button>
-            </form>
-          </div>
+               </div>
+            </div>
+            
+            <button type="submit" className="w-full py-4 bg-primary text-white font-black rounded-2xl uppercase tracking-widest text-[10px] mt-4 shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">Guardar Miembro</button>
+          </form>
         </div>
-
-        {/* Lista de Miembros - Responsiva */}
-        <div className="lg:col-span-8 order-1 lg:order-2 bg-white dark:bg-card-dark rounded-3xl lg:rounded-5xl shadow-2xl border border-slate-200 dark:border-white/5 overflow-hidden">
-          <div className="p-6 lg:p-10 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/5 flex justify-between items-center">
-             <h3 className="text-[10px] lg:text-xs font-black uppercase tracking-[0.3em] text-slate-600 dark:text-slate-400">Nómina de Miembros</h3>
-             <div className="hidden sm:flex gap-4">
-                <span className="flex items-center gap-2 text-[8px] lg:text-[10px] font-black text-primary uppercase"><div className="size-2 bg-primary rounded-full"></div> Voces</span>
-             </div>
-          </div>
-          
-          {/* Vista para Celulares (Tarjetas) */}
-          <div className="lg:hidden p-4 space-y-4">
-            {choirDirector && (
-              <div className="bg-gradient-to-br from-secondary/20 to-secondary/5 p-5 rounded-2xl border-2 border-secondary/30 relative">
-                <div className="flex items-center gap-4">
-                  <div className="size-12 rounded-xl bg-secondary flex items-center justify-center text-midnight font-black text-xl shadow-lg">
-                    {choirDirector.name.charAt(0)}
-                  </div>
-                  <div className="flex flex-col">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-black text-slate-900 dark:text-white uppercase">{choirDirector.name}</span>
-                    </div>
-                    <span className="text-[8px] font-black uppercase tracking-widest text-secondary">Director de Sede</span>
-                  </div>
-                </div>
-                <div className="absolute top-4 right-4 text-secondary">
-                  <span className="material-symbols-outlined text-xl fill-1">verified</span>
-                </div>
-              </div>
-            )}
-            
-            {members.map(member => (
-              <div key={member.id} className="bg-slate-50 dark:bg-white/5 p-4 rounded-2xl border border-slate-100 dark:border-white/10 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className={`size-12 rounded-xl bg-gradient-to-br ${getVoiceColor(member.voiceType)} flex items-center justify-center font-black text-white text-lg shadow-md`}>
-                    {member.firstName.charAt(0)}
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{member.firstName} {member.lastName}</span>
-                    <div className="flex gap-2">
-                       <span className="text-[8px] font-black uppercase text-primary">{member.voiceType}</span>
-                       <span className="text-[8px] font-black uppercase text-slate-400">|</span>
-                       <span className="text-[8px] font-black uppercase text-slate-400">{member.gender}</span>
-                    </div>
-                  </div>
-                </div>
-                <button onClick={() => onDeleteMember(member.id)} className="size-10 rounded-xl bg-red-500/10 text-red-500 flex items-center justify-center">
-                   <span className="material-symbols-outlined text-lg">delete</span>
-                </button>
-              </div>
-            ))}
-            
-            {members.length === 0 && !choirDirector && (
-              <div className="py-12 text-center text-slate-400">
-                <span className="material-symbols-outlined text-4xl mb-2">person_off</span>
-                <p className="text-[10px] font-black uppercase tracking-widest">Sin registros registrados</p>
-              </div>
-            )}
+        
+        <div className="lg:col-span-8 bg-white dark:bg-card-dark rounded-[3rem] shadow-lg border border-slate-200 dark:border-white/5 overflow-hidden flex flex-col">
+          <div className="p-8 border-b border-slate-100 dark:border-white/5 flex items-center justify-between bg-slate-50/50 dark:bg-white/[0.02]">
+            <h3 className="text-xl font-black uppercase text-slate-900 dark:text-white tracking-tighter">Miembros Registrados</h3>
+            <span className="text-[10px] font-black px-4 py-1.5 bg-slate-100 dark:bg-white/5 text-slate-500 rounded-full border border-slate-200 dark:border-white/10 uppercase tracking-widest">{currentMembers.length} Total</span>
           </div>
 
-          {/* Vista para Escritorio (Tabla) */}
-          <div className="hidden lg:block overflow-x-auto">
+          {currentDirector && (
+            <div className="mx-8 mt-6 mb-2 p-6 bg-primary/[0.03] dark:bg-primary/[0.05] rounded-[2.5rem] border border-primary/10 flex items-center justify-between group shadow-sm">
+               <div className="flex items-center gap-6">
+                  <div className="size-20 rounded-[1.8rem] bg-secondary overflow-hidden border-2 border-primary/30 shadow-2xl shrink-0">
+                      {currentDirector.avatar ? (
+                        <img src={currentDirector.avatar} className="size-full object-cover" alt={currentDirector.name} />
+                      ) : (
+                        <div className="size-full flex items-center justify-center bg-slate-100 dark:bg-slate-800">
+                          <span className="material-symbols-outlined text-slate-300 text-3xl">person</span>
+                        </div>
+                      )}
+                  </div>
+                  <div className="flex flex-col">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Director de Sede</span>
+                        <span className="material-symbols-outlined text-primary text-sm fill-1">verified</span>
+                      </div>
+                      <span className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-tight">{currentDirector.name}</span>
+                  </div>
+               </div>
+               <div className="hidden sm:flex flex-col items-end pr-4 opacity-50">
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Responsable Superior</span>
+               </div>
+            </div>
+          )}
+
+          <div className="overflow-x-auto px-2">
             <table className="w-full">
               <thead>
-                <tr className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-widest text-left">
-                  <th className="px-10 py-6">Perfil</th>
-                  <th className="px-10 py-6">Tesitura</th>
-                  <th className="px-10 py-6 text-center">Gestión</th>
+                <tr className="text-[10px] font-black uppercase text-slate-400 tracking-widest border-b border-slate-100 dark:border-white/5">
+                  <th className="px-8 py-5 text-left">Miembro</th>
+                  <th className="px-8 py-5 text-left">Voz</th>
+                  <th className="px-8 py-5 text-center">Gestión</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-white/5">
-                {choirDirector && (
-                  <tr className="bg-gradient-to-r from-secondary/10 to-transparent border-l-8 border-secondary group">
-                    <td className="px-10 py-8">
-                      <div className="flex items-center gap-5">
-                         <div className="size-16 rounded-2xl bg-gradient-to-br from-secondary to-[#ecd6c0] flex items-center justify-center font-black text-midnight text-2xl shadow-2xl">
-                            {choirDirector.name.charAt(0)}
-                         </div>
-                         <div className="flex flex-col">
-                            <div className="flex items-center gap-2">
-                               <span className="text-xl font-black text-slate-900 dark:text-white tracking-tighter uppercase">{choirDirector.name}</span>
-                               <span className="bg-secondary text-midnight text-[8px] font-black px-2 py-1 rounded-lg uppercase tracking-widest flex items-center gap-1">Director</span>
-                            </div>
-                         </div>
-                      </div>
-                    </td>
-                    <td className="px-10 py-8">
-                       <span className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-midnight dark:bg-white text-white dark:text-midnight text-[11px] font-black uppercase tracking-widest">
-                          <span className="material-symbols-outlined text-sm fill-1">star</span>
-                          Director
-                       </span>
-                    </td>
-                    <td className="px-10 py-8 text-center text-slate-300">
-                       <span className="material-symbols-outlined">lock</span>
-                    </td>
-                  </tr>
-                )}
-
-                {members.map(member => (
+              <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                {currentMembers.map(member => (
                   <tr key={member.id} className="group hover:bg-slate-50 dark:hover:bg-white/[0.01] transition-all">
-                    <td className="px-10 py-6">
-                      <div className="flex items-center gap-5">
-                         <div className={`size-14 rounded-2xl bg-gradient-to-br ${getVoiceColor(member.voiceType)} flex items-center justify-center font-black text-white text-xl shadow-lg`}>
-                            {member.firstName.charAt(0)}
-                         </div>
+                    <td className="px-8 py-5">
+                      <button onClick={() => onViewMember(member)} className="flex items-center gap-4 hover:translate-x-1 transition-transform group/name text-left">
+                         <div className={`size-12 rounded-2xl bg-gradient-to-br ${getVoiceColor(member.voiceType)} flex items-center justify-center font-black text-white shadow-sm`}>{member.firstName.charAt(0)}</div>
                          <div className="flex flex-col">
-                            <span className="text-lg font-black text-slate-900 dark:text-white tracking-tighter uppercase">{member.firstName} {member.lastName}</span>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-primary">{member.gender}</span>
+                            <span className="text-sm font-black text-slate-900 dark:text-white uppercase group-hover/name:text-primary transition-colors">{member.firstName} {member.lastName}</span>
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{member.gender}</span>
                          </div>
-                      </div>
+                      </button>
                     </td>
-                    <td className="px-10 py-6">
-                       <span className={`inline-flex items-center gap-2 px-5 py-2 rounded-2xl bg-gradient-to-r ${getVoiceColor(member.voiceType)} text-white text-[11px] font-black uppercase tracking-widest shadow-xl`}>
-                          {member.voiceType}
-                       </span>
-                    </td>
-                    <td className="px-10 py-6 text-center">
-                       <button onClick={() => onDeleteMember(member.id)} className="size-12 rounded-2xl border-2 border-slate-200 dark:border-white/5 text-slate-400 hover:text-white hover:bg-red-500 hover:border-red-500 transition-all flex items-center justify-center mx-auto">
-                         <span className="material-symbols-outlined text-xl">delete</span>
-                       </button>
-                    </td>
+                    <td className="px-8 py-5"><span className="text-[9px] font-black text-primary uppercase tracking-widest bg-primary/5 px-3 py-1 rounded-full">{member.voiceType}</span></td>
+                    <td className="px-8 py-5 text-center"><button onClick={() => onDeleteMember(member.id)} className="size-10 rounded-xl border border-slate-100 dark:border-white/5 text-slate-300 hover:text-red-500 hover:border-red-100 transition-all"><span className="material-symbols-outlined">delete</span></button></td>
                   </tr>
                 ))}
               </tbody>

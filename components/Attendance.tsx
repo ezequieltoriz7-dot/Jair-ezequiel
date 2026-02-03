@@ -36,7 +36,10 @@ const Attendance: React.FC<AttendanceProps> = ({ members, onSaveReport }) => {
       alert("La asistencia solo se puede reportar Sábados y Domingos.");
       return;
     }
+    // Fix: Added missing properties 'id' and 'eventId' to match AttendanceRecord interface
     const newRecords: AttendanceRecord[] = members.map(m => ({
+      id: crypto.randomUUID(),
+      eventId: 'manual-entry', // Using a default value as eventId is required by AttendanceRecord
       date: selectedDate,
       memberId: m.id,
       present: !!presenceMap[m.id]

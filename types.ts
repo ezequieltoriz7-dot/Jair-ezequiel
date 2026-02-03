@@ -9,8 +9,11 @@ export enum ViewType {
   CHORUSES = 'choruses',
   REPORTS = 'reports',
   EVENTS = 'events',
+  EVENT_DETAILS = 'event_details',
   ANALYTICS = 'analytics',
-  USER_MANAGEMENT = 'user_management'
+  USER_MANAGEMENT = 'user_management',
+  RAW_DATA = 'raw_data',
+  MEMBER_PROFILE = 'member_profile'
 }
 
 export enum TimeFilter {
@@ -35,7 +38,7 @@ export interface Member {
   lastName: string;
   email: string;
   choirId: string;
-  voiceType: 'Soprano' | 'Contralto' | 'Tenor' | 'Bajo';
+  voiceType: 'Soprano' | 'Contralto' | 'Tenor' | 'Bajo' | 'Por asignar';
   gender: 'Hombre' | 'Mujer';
 }
 
@@ -46,6 +49,7 @@ export interface Event {
   time: string;
   location: string;
   imageUrl?: string;
+  description?: string;
 }
 
 export interface AttendanceRecord {
@@ -63,7 +67,7 @@ export interface ChoirData {
   attendance: number;
   streak: number;
   status: 'Activo' | 'Revisión' | 'Inactivo';
-  imageUrl?: string; // Campo para la foto de la iglesia/sede
+  imageUrl?: string;
 }
 
 export interface AttendanceTrend {
