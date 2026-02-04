@@ -13,6 +13,7 @@ interface ChorusesProps {
   onViewMember: (member: Member) => void;
   userRole: Role;
   userChoirId?: string;
+  currentUser: User;
 }
 
 const Choruses: React.FC<ChorusesProps> = ({ 
@@ -25,7 +26,8 @@ const Choruses: React.FC<ChorusesProps> = ({
   onUpdateChoirPhoto,
   onViewMember,
   userRole, 
-  userChoirId 
+  userChoirId,
+  currentUser
 }) => {
   const isAdmin = userRole === Role.ADMIN;
   const [searchTerm, setSearchTerm] = useState('');
@@ -51,8 +53,24 @@ const Choruses: React.FC<ChorusesProps> = ({
   const filteredChoirs = useMemo(() => choirs.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase())), [choirs, searchTerm]);
   const currentChoir = choirs.find(c => c.id === selectedChoirId);
   const currentMembers = members.filter(m => m.choirId === selectedChoirId);
-  const currentDirector = useMemo(() => directors.find(d => d.choirId === selectedChoirId), [directors, selectedChoirId]);
   
+  // Lógica mejorada: Primero buscamos si el usuario logueado es el director de esta sede
+  const currentDirector = useMemo(() => {
+    if (!selectedChoirId) return null;
+    
+    // Si yo soy el director de esta sede, usar mis datos actualizados (incluyendo foto)
+    if (String(currentUser.choirId) === String(selectedChoirId)) {
+      return currentUser;
+    }
+    
+    // Si no soy yo, buscar en la lista global
+    return directors.find(d => String(d.choirId) === String(selectedChoirId));
+  }, [directors, selectedChoirId, currentUser]);
+  
+  const choirAttendance = useMemo(() => {
+    return selectedChoirId ? getRealAttendance(selectedChoirId) : 0;
+  }, [selectedChoirId, members, reports]);
+
   const [formData, setFormData] = useState({ 
     firstName: '', 
     lastName: '', 
@@ -72,34 +90,22 @@ const Choruses: React.FC<ChorusesProps> = ({
     }
   };
 
-  // Compresión mejorada para máxima seguridad de datos (Calidad 0.4)
   const compressImage = (base64: string): Promise<string> => {
     return new Promise((resolve) => {
       const img = new Image();
       img.src = base64;
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 800; // Reducido para mayor ahorro de espacio
+        const MAX_WIDTH = 800;
         const MAX_HEIGHT = 600;
         let width = img.width;
         let height = img.height;
-
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
-          }
-        } else {
-          if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height;
-            height = MAX_HEIGHT;
-          }
-        }
-        canvas.width = width;
-        canvas.height = height;
+        if (width > height) { if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } }
+        else { if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } }
+        canvas.width = width; canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.4)); // Calidad reducida para asegurar permanencia
+        resolve(canvas.toDataURL('image/jpeg', 0.4));
       };
     });
   };
@@ -172,8 +178,12 @@ const Choruses: React.FC<ChorusesProps> = ({
     <div className="animate-in fade-in zoom-in-95 duration-700 space-y-8 pb-20">
       <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
         {isAdmin && (
-          <button onClick={() => setSelectedChoirId(null)} className="flex items-center gap-1 text-primary font-black uppercase text-[10px] tracking-widest hover:-translate-x-1 transition-transform ml-1">
-            <span className="material-symbols-outlined text-sm">arrow_back</span> Regresar a Sedes
+          <button 
+            onClick={() => setSelectedChoirId(null)} 
+            className="flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/10 text-primary font-black uppercase text-[10px] tracking-widest hover:bg-primary hover:text-white transition-all shadow-sm"
+          >
+            <span className="material-symbols-outlined text-sm font-black">arrow_back</span> 
+            Regresar a Sedes
           </button>
         )}
       </div>
@@ -184,8 +194,19 @@ const Choruses: React.FC<ChorusesProps> = ({
         ) : (
             <div className="absolute inset-0 bg-gradient-to-br from-primary to-blue-900"></div>
         )}
+        <div className="absolute inset-0 bg-black/30 lg:bg-transparent"></div>
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
-        <h2 className="absolute bottom-10 left-10 text-4xl lg:text-6xl font-black text-white uppercase tracking-tighter drop-shadow-2xl">{currentChoir?.name || '---'}</h2>
+        
+        <div className="absolute bottom-6 left-6 lg:bottom-10 lg:left-10 flex flex-col gap-1">
+           <div className="flex items-center gap-3">
+              <h2 className="text-3xl lg:text-6xl font-black text-white uppercase tracking-tighter drop-shadow-2xl">{currentChoir?.name || '---'}</h2>
+              <div className="px-3 py-1 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 flex flex-col items-center">
+                 <span className="text-white text-[10px] lg:text-xs font-black">{choirAttendance}%</span>
+                 <span className="text-white/60 text-[6px] lg:text-[8px] font-black uppercase tracking-widest leading-none">Eficiencia</span>
+              </div>
+           </div>
+           <p className="text-white/60 text-[8px] lg:text-xs font-black uppercase tracking-[0.3em]">Estado: <span className="text-primary">{currentChoir?.status || 'Activo'}</span></p>
+        </div>
         
         {isAdmin && (
           <button 
@@ -237,33 +258,34 @@ const Choruses: React.FC<ChorusesProps> = ({
             <span className="text-[10px] font-black px-4 py-1.5 bg-slate-100 dark:bg-white/5 text-slate-500 rounded-full border border-slate-200 dark:border-white/10 uppercase tracking-widest">{currentMembers.length} Total</span>
           </div>
 
-          {currentDirector && (
-            <div className="mx-8 mt-6 mb-2 p-6 bg-primary/[0.03] dark:bg-primary/[0.05] rounded-[2.5rem] border border-primary/10 flex items-center justify-between group shadow-sm">
-               <div className="flex items-center gap-6">
-                  <div className="size-20 rounded-[1.8rem] bg-secondary overflow-hidden border-2 border-primary/30 shadow-2xl shrink-0">
-                      {currentDirector.avatar ? (
+          {/* TARJETA DEL DIRECTOR FIJADA EN TODAS LAS SEDES */}
+          <div className="px-4 lg:px-8 mt-6">
+            <div className="p-4 lg:p-6 bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/20 rounded-[2rem] lg:rounded-[2.5rem] border border-primary/20 flex flex-col sm:flex-row items-center justify-between gap-4 group shadow-sm transition-all hover:border-primary/40">
+               <div className="flex items-center gap-4 lg:gap-6">
+                  <div className="size-16 lg:size-20 rounded-[1.5rem] lg:rounded-[1.8rem] bg-slate-900 dark:bg-slate-800 overflow-hidden border-2 border-primary/30 shadow-2xl shrink-0 flex items-center justify-center">
+                      {currentDirector?.avatar ? (
                         <img src={currentDirector.avatar} className="size-full object-cover" alt={currentDirector.name} />
                       ) : (
-                        <div className="size-full flex items-center justify-center bg-slate-100 dark:bg-slate-800">
-                          <span className="material-symbols-outlined text-slate-300 text-3xl">person</span>
-                        </div>
+                        <span className="text-xl lg:text-3xl font-black text-white opacity-40">{currentDirector?.name?.charAt(0) || '?'}</span>
                       )}
                   </div>
-                  <div className="flex flex-col">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Director de Sede</span>
+                  <div className="flex flex-col text-center sm:text-left">
+                      <div className="flex items-center justify-center sm:justify-start gap-2">
+                        <span className="text-[8px] lg:text-[10px] font-black text-primary uppercase tracking-[0.2em]">Dirección de Sede</span>
                         <span className="material-symbols-outlined text-primary text-sm fill-1">verified</span>
                       </div>
-                      <span className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-tight">{currentDirector.name}</span>
+                      <span className="text-xl lg:text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-tight">
+                        {currentDirector ? currentDirector.name : "Pendiente de Asignación"}
+                      </span>
                   </div>
                </div>
-               <div className="hidden sm:flex flex-col items-end pr-4 opacity-50">
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Responsable Superior</span>
+               <div className="hidden md:flex flex-col items-end pr-4">
+                  <div className="px-4 py-1.5 bg-primary text-white rounded-full text-[8px] font-black uppercase tracking-widest shadow-lg shadow-primary/20">Responsable</div>
                </div>
             </div>
-          )}
+          </div>
 
-          <div className="overflow-x-auto px-2">
+          <div className="overflow-x-auto px-2 mt-4">
             <table className="w-full">
               <thead>
                 <tr className="text-[10px] font-black uppercase text-slate-400 tracking-widest border-b border-slate-100 dark:border-white/5">

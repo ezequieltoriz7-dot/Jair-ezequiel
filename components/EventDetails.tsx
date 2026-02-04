@@ -14,16 +14,16 @@ const EventDetails: React.FC<EventDetailsProps> = ({ event, onBack }) => {
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
   return (
-    <div className="animate-in fade-in slide-in-from-right-8 duration-700 max-w-6xl mx-auto space-y-12 pb-20">
+    <div className="animate-in fade-in slide-in-from-right-8 duration-700 max-w-6xl mx-auto space-y-8 pb-20">
       <button 
         onClick={onBack}
-        className="flex items-center gap-2 text-primary font-black uppercase text-[10px] tracking-widest hover:translate-x-[-5px] transition-transform"
+        className="group flex items-center gap-3 px-6 py-3 bg-white dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/10 text-primary font-black uppercase text-[10px] tracking-widest hover:bg-primary hover:text-white transition-all shadow-md active:scale-95"
       >
-        <span className="material-symbols-outlined">arrow_back</span> Regresar a la Cartelera
+        <span className="material-symbols-outlined text-sm font-black group-hover:-translate-x-1 transition-transform">arrow_back</span> 
+        Regresar a la Cartelera
       </button>
 
       <div className="bg-white dark:bg-card-dark rounded-[3.5rem] border border-slate-200 dark:border-white/5 shadow-3xl overflow-hidden">
-        {/* Hero Section */}
         <div className="relative h-[400px] lg:h-[550px] w-full overflow-hidden">
           {event.imageUrl ? (
             <img src={event.imageUrl} className="w-full h-full object-cover" alt={event.name} />
@@ -61,7 +61,6 @@ const EventDetails: React.FC<EventDetailsProps> = ({ event, onBack }) => {
           </div>
         </div>
 
-        {/* Content Section */}
         <div className="p-12 lg:p-20 grid grid-cols-1 lg:grid-cols-12 gap-16">
           <div className="lg:col-span-7 space-y-10">
             <div className="space-y-4">

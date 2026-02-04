@@ -22,14 +22,10 @@ const MemberProfile: React.FC<MemberProfileProps> = ({ member, reports, events, 
     const total = myReports.length;
     const ratio = total > 0 ? Math.round((presentCount / total) * 100) : 0;
     
-    // LÓGICA DE ALERTA: 3 o más faltas consecutivas (empezando desde el más reciente)
     let consecutiveAbsences = 0;
     for (const r of myReports) {
-      if (!r.present) {
-        consecutiveAbsences++;
-      } else {
-        break; // Se rompe la racha si hay una asistencia
-      }
+      if (!r.present) { consecutiveAbsences++; }
+      else { break; }
     }
 
     return {
@@ -53,8 +49,12 @@ const MemberProfile: React.FC<MemberProfileProps> = ({ member, reports, events, 
 
   return (
     <div className="animate-in fade-in slide-in-from-right-4 duration-500 space-y-8 pb-20">
-      <button onClick={onBack} className="flex items-center gap-2 text-primary font-black uppercase text-[10px] tracking-widest hover:-translate-x-1 transition-transform">
-        <span className="material-symbols-outlined">arrow_back</span> Regresar a la Lista
+      <button 
+        onClick={onBack} 
+        className="group flex items-center gap-3 px-6 py-3 bg-white dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/10 text-primary font-black uppercase text-[10px] tracking-widest hover:bg-primary hover:text-white transition-all shadow-md active:scale-95"
+      >
+        <span className="material-symbols-outlined text-sm font-black group-hover:-translate-x-1 transition-transform">arrow_back</span> 
+        Regresar a la Lista
       </button>
 
       <div className="bg-white dark:bg-card-dark rounded-[3.5rem] border border-slate-200 dark:border-white/5 shadow-xl overflow-hidden">

@@ -24,9 +24,7 @@ const Persistence = {
     try {
       if (!data && key !== 'session') return; 
       localStorage.setItem(`${APP_STORAGE_KEY}_${key}`, JSON.stringify(data));
-    } catch (e) {
-      console.warn(`Error de cuota en ${key}.`);
-    }
+    } catch (e) { console.warn(`Error de cuota en ${key}.`); }
   },
   load: <T,>(key: string, defaultValue: T): T => {
     try {
@@ -41,18 +39,12 @@ const Persistence = {
         }
         return parsed;
       }
-
       for (const legacyKey of LEGACY_KEYS) {
         const legacyData = localStorage.getItem(`${legacyKey}_${key}`);
-        if (legacyData) {
-          return JSON.parse(legacyData);
-        }
+        if (legacyData) return JSON.parse(legacyData);
       }
-
       return defaultValue;
-    } catch (e) {
-      return defaultValue;
-    }
+    } catch (e) { return defaultValue; }
   },
   exportData: () => {
     const data = {
@@ -64,10 +56,7 @@ const Persistence = {
     };
     const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `respaldo_umbral_${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
+    const a = document.createElement('a'); a.href = url; a.download = `respaldo_umbral_${new Date().toISOString().split('T')[0]}.json`; a.click();
   }
 };
 
@@ -79,6 +68,7 @@ const App: React.FC = () => {
   const [selectedEventForDetails, setSelectedEventForDetails] = useState<Event | null>(null);
   const [selectedMemberForProfile, setSelectedMemberForProfile] = useState<Member | null>(null);
   const [currentView, setCurrentView] = useState<ViewType>(ViewType.DASHBOARD);
+  const [previousView, setPreviousView] = useState<ViewType>(ViewType.CHORUSES);
 
   const isInitialized = useRef(false);
 
@@ -88,26 +78,23 @@ const App: React.FC = () => {
   
   const [allUsers, setAllUsers] = useState<User[]>(() => Persistence.load('users', [
     { id: 'u-admin', name: 'Administrador Maestro', email: 'admin@umbral.com', role: Role.ADMIN },
-    { id: 'd-bic', name: 'Director Bicentenario', email: 'bic@umbral.com', role: Role.DIRECTOR, choirId: '1' },
-    { id: 'd-buc', name: 'Director Bucerías', email: 'buc@umbral.com', role: Role.DIRECTOR, choirId: '2' },
-    { id: 'd-pdm', name: 'Director Punta de Mita', email: 'pdm@umbral.com', role: Role.DIRECTOR, choirId: '9' },
-    { id: 'd-mez', name: 'Director Mezcales', email: 'mez@umbral.com', role: Role.DIRECTOR, choirId: '6' },
-    { id: 'd-sig', name: 'Director San Ignacio', email: 'sig@umbral.com', role: Role.DIRECTOR, choirId: '10' }
+    { id: 'u-1', name: 'Director Bicentenario', email: 'bic@umbral.com', role: Role.DIRECTOR, choirId: '1' },
+    { id: 'u-2', name: 'Director Bucerías', email: 'buc@umbral.com', role: Role.DIRECTOR, choirId: '2' },
+    { id: 'u-9', name: 'Director Punta de Mita', email: 'pdm@umbral.com', role: Role.DIRECTOR, choirId: '9' },
+    { id: 'u-6', name: 'Director Mezcales', email: 'mez@umbral.com', role: Role.DIRECTOR, choirId: '6' },
+    { id: 'u-10', name: 'Director San Ignacio', email: 'sig@umbral.com', role: Role.DIRECTOR, choirId: '10' }
   ]));
 
   const [members, setMembers] = useState<Member[]>(() => Persistence.load('members', INITIAL_MEMBERS));
   const [reports, setReports] = useState<AttendanceRecord[]>(() => Persistence.load('reports', []));
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      isInitialized.current = true;
-    }, 100);
+    const timer = setTimeout(() => { isInitialized.current = true; }, 100);
     return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
     if (!isInitialized.current) return;
-    
     Persistence.save('session', user);
     Persistence.save('users', allUsers);
     Persistence.save('events', events);
@@ -115,7 +102,6 @@ const App: React.FC = () => {
     Persistence.save('reports', reports);
     Persistence.save('choirs', choirs);
     Persistence.save('dark_mode', isDarkMode);
-
     syncChannel.postMessage('update');
   }, [user, allUsers, events, members, reports, choirs, isDarkMode]);
 
@@ -129,10 +115,7 @@ const App: React.FC = () => {
     };
     syncChannel.onmessage = handleSync;
     window.addEventListener('storage', handleSync);
-    return () => {
-      syncChannel.onmessage = null;
-      window.removeEventListener('storage', handleSync);
-    };
+    return () => { syncChannel.onmessage = null; window.removeEventListener('storage', handleSync); };
   }, []);
 
   useEffect(() => {
@@ -161,6 +144,7 @@ const App: React.FC = () => {
   };
 
   const handleViewMember = (member: Member) => {
+    setPreviousView(currentView);
     setSelectedMemberForProfile(member);
     setCurrentView(ViewType.MEMBER_PROFILE);
     setIsSidebarOpen(false);
@@ -169,6 +153,11 @@ const App: React.FC = () => {
   const handleLogin = (loggedUser: User) => {
     const existing = allUsers.find(u => u.id === loggedUser.id);
     const final = existing ? { ...loggedUser, ...existing } : loggedUser;
+    
+    if (!existing) {
+      setAllUsers(prev => [...prev, loggedUser]);
+    }
+    
     setUser(final);
     setCurrentView(final.role === Role.ADMIN ? ViewType.DASHBOARD : ViewType.CHORUSES);
   };
@@ -180,7 +169,7 @@ const App: React.FC = () => {
   return (
     <div className="flex h-screen overflow-hidden bg-[#f8fafc] dark:bg-midnight font-sans transition-colors duration-700">
       <Sidebar 
-        currentView={currentView === ViewType.MEMBER_PROFILE ? ViewType.CHORUSES : currentView} 
+        currentView={(currentView === ViewType.MEMBER_PROFILE || currentView === ViewType.EVENT_DETAILS) ? previousView : currentView} 
         setView={(view) => { if (view === ViewType.CHORUSES && user.role === Role.ADMIN) setAdminChoirFilter(null); setCurrentView(view); setIsSidebarOpen(false); }} 
         user={user} 
         onLogout={handleLogout}
@@ -216,16 +205,17 @@ const App: React.FC = () => {
               onViewMember={handleViewMember}
               userRole={user.role} 
               userChoirId={user.role === Role.ADMIN ? (adminChoirFilter || undefined) : user.choirId}
+              currentUser={user}
             />
           )}
           {currentView === ViewType.REPORTS && (
             <Reports members={members.filter(m => user.role === Role.ADMIN ? (adminChoirFilter ? m.choirId === adminChoirFilter : true) : m.choirId === user.choirId)} events={events} onSaveReport={(recs) => setReports(prev => [...prev, ...recs])} reports={reports} currentUser={user} />
           )}
           {currentView === ViewType.EVENTS && (
-            <Events events={events} userRole={user.role} onAddEvent={(e) => setEvents(prev => [...prev, e])} onDeleteEvent={(id) => setEvents(prev => prev.filter(e => e.id !== id))} onUpdateEvent={(e) => setEvents(prev => prev.map(ev => ev.id === e.id ? e : ev))} onViewEvent={(e) => { setSelectedEventForDetails(e); setCurrentView(ViewType.EVENT_DETAILS); }} />
+            <Events events={events} userRole={user.role} onAddEvent={(e) => setEvents(prev => [...prev, e])} onDeleteEvent={(id) => setEvents(prev => prev.filter(e => e.id !== id))} onUpdateEvent={(e) => setEvents(prev => prev.map(ev => ev.id === e.id ? e : ev))} onViewEvent={(e) => { setPreviousView(ViewType.EVENTS); setSelectedEventForDetails(e); setCurrentView(ViewType.EVENT_DETAILS); }} />
           )}
-          {currentView === ViewType.EVENT_DETAILS && selectedEventForDetails && <EventDetails event={selectedEventForDetails} onBack={() => setCurrentView(ViewType.EVENTS)} />}
-          {currentView === ViewType.MEMBER_PROFILE && selectedMemberForProfile && <MemberProfile member={selectedMemberForProfile} reports={reports} events={events} choir={choirs.find(c => c.id === selectedMemberForProfile.choirId)!} onBack={() => setCurrentView(ViewType.CHORUSES)} />}
+          {currentView === ViewType.EVENT_DETAILS && selectedEventForDetails && <EventDetails event={selectedEventForDetails} onBack={() => setCurrentView(previousView)} />}
+          {currentView === ViewType.MEMBER_PROFILE && selectedMemberForProfile && <MemberProfile member={selectedMemberForProfile} reports={reports} events={events} choir={choirs.find(c => c.id === selectedMemberForProfile.choirId)!} onBack={() => setCurrentView(previousView)} />}
           {currentView === ViewType.USER_MANAGEMENT && <UserManagement users={allUsers} setUsers={setAllUsers} />}
           {currentView === ViewType.ANALYTICS && <QualityAnalytics reports={reports} choirs={choirs} members={members} events={events} userRole={user.role} />}
           {currentView === ViewType.RAW_DATA && <RawData reports={reports} members={members} choirs={choirs} events={events} users={allUsers} onMemberClick={handleViewMember} />}
