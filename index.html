@@ -14,10 +14,10 @@
             theme: {
                 extend: {
                     colors: {
-                        "primary": "#1E40AF", // Azul Cobalto Profundo (Equilibrado)
+                        "primary": "#1E40AF", // Azul Cobalto Profundo
                         "secondary": "#0F172A", // Azul Medianoche
-                        "vibrant-pink": "#3B82F6", // Azul Brillante para acentos
-                        "vibrant-cyan": "#F8FAFC", // Humo de Seda (Sustituye al blanco puro)
+                        "vibrant-pink": "#3B82F6", 
+                        "vibrant-cyan": "#F1F5F9", // Gris Glacial suave (Evita blanco puro)
                         "vibrant-green": "#2563EB",
                         "midnight": "#020617",
                         "card-dark": "#0B1120"
@@ -41,37 +41,55 @@
         .material-symbols-outlined {
             font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
         }
-        .fill-1 { font-variation-settings: 'FILL' 1; }
         
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
             background: #F8FAFC;
-            color: #1E293B;
-            font-size: 14px; /* Medida estándar cómoda */
+            color: #1E293B; /* Slate 800 - Mucho más cómodo que el negro puro */
+            font-size: 15px; /* Ligeramente mayor al estándar para confort */
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
         }
-        .dark body { background: #020617; color: #E2E8F0; }
 
-        /* Ajuste para evitar textos blancos puros */
-        .text-white { color: #F8FAFC !important; }
-        .dark .text-white { color: #F1F5F9 !important; }
+        .dark body { 
+            background: #020617; 
+            color: #CBD5E1; /* Slate 300 - Suave para ojos en oscuridad */
+        }
+
+        /* Sustitución global de blancos y negros puros para legibilidad */
+        .text-white { color: #F1F5F9 !important; }
+        .bg-white { background-color: #F8FAFC !important; }
+        .dark .bg-white { background-color: #0B1120 !important; }
+        
+        .text-black { color: #0F172A !important; }
+        .dark .text-black { color: #F8FAFC !important; }
+
+        /* Ajustes responsivos para títulos */
+        h1, h2, h3 {
+            font-family: 'Outfit', sans-serif;
+            letter-spacing: -0.02em;
+        }
+
+        /* Estándar de lectura para móviles */
+        @media (max-width: 768px) {
+            body { font-size: 14px; }
+            .text-sm { font-size: 13px; }
+            .text-xs { font-size: 12px; }
+        }
 
         .glass-card {
-            background: rgba(255, 255, 255, 0.7);
+            background: rgba(241, 245, 249, 0.8);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(30, 64, 175, 0.1);
         }
-
-        .text-vivid-gradient {
-            background: linear-gradient(to right, #1E3A8A, #2563EB, #1D4ED8);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+        .dark .glass-card {
+            background: rgba(11, 17, 32, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
-        
-        /* Normalización de tamaños de texto para legibilidad */
-        .text-tiny { font-size: 0.75rem; line-height: 1rem; } /* 12px mínimo */
-        
+
         ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-track { background: #F1F5F9; }
+        .dark ::-webkit-scrollbar-track { background: #020617; }
         ::-webkit-scrollbar-thumb { background: #1E40AF; border-radius: 10px; }
 
         .bg-primary { background-color: #1E40AF !important; }
