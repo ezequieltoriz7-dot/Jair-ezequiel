@@ -4,39 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>El Umbral De La Esperanza - Gestión Coral Elite</title>
+    <title>El Umbral De La Esperanza - GestiÃ³n Coral Elite</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
-    <script>
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    colors: {
-                        "primary": "#0095FF", // Azul Eléctrico Vibrante (Más claro y vivo)
-                        "secondary": "#000000", // Negro
-                        "vibrant-pink": "#005FB8", // Azul Profundo (Para dar ese toque "oscuro" y profesional)
-                        "vibrant-cyan": "#FFFFFF", // Blanco
-                        "vibrant-green": "#0095FF",
-                        "midnight": "#000000",
-                        "card-dark": "#0F0F0F"
-                    },
-                    fontFamily: {
-                        "sans": ["Plus Jakarta Sans", "sans-serif"],
-                        "display": ["Outfit", "sans-serif"]
-                    },
-                    borderRadius: {
-                        "4xl": "2rem",
-                        "5xl": "3.5rem"
-                    },
-                    boxShadow: {
-                        "premium": "0 25px 50px -12px rgba(0, 149, 255, 0.15)"
-                    }
-                }
-            }
-        }
-    </script>
     <style>
         .material-symbols-outlined {
             font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
@@ -112,7 +83,7 @@
             background: #0095FF;
         }
 
-        /* Estilos específicos para asegurar legibilidad en blanco/negro/azul */
+        /* Estilos especÃ­ficos para asegurar legibilidad en blanco/negro/azul */
         .bg-primary { background-color: #0095FF !important; }
         .text-primary { color: #0095FF !important; }
         .border-primary { border-color: #0095FF !important; }
@@ -122,18 +93,9 @@
         
         .dark .bg-secondary { background-color: #FFFFFF !important; color: #000000 !important; }
     </style>
-<script type="importmap">
-{
-  "imports": {
-    "recharts": "https://esm.sh/recharts@^3.7.0",
-    "react/": "https://esm.sh/react@^19.2.4/",
-    "react": "https://esm.sh/react@^19.2.4",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/"
-  }
-}
-</script>
 </head>
 <body class="transition-all duration-700">
     <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
 </body>
 </html>
