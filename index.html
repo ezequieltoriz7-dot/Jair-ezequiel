@@ -4,98 +4,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>El Umbral De La Esperanza - GestiÃ³n Coral Elite</title>
+    <title>El Umbral De La Esperanza - Gestión Coral Elite</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1E40AF", // Azul Cobalto Profundo (Equilibrado)
+                        "secondary": "#0F172A", // Azul Medianoche
+                        "vibrant-pink": "#3B82F6", // Azul Brillante para acentos
+                        "vibrant-cyan": "#F8FAFC", // Humo de Seda (Sustituye al blanco puro)
+                        "vibrant-green": "#2563EB",
+                        "midnight": "#020617",
+                        "card-dark": "#0B1120"
+                    },
+                    fontFamily: {
+                        "sans": ["Plus Jakarta Sans", "sans-serif"],
+                        "display": ["Outfit", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "4xl": "2rem",
+                        "5xl": "3.5rem"
+                    },
+                    boxShadow: {
+                        "premium": "0 25px 50px -12px rgba(30, 64, 175, 0.25)"
+                    }
+                }
+            }
+        }
+    </script>
     <style>
         .material-symbols-outlined {
-            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
         }
         .fill-1 { font-variation-settings: 'FILL' 1; }
         
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background: #FFFFFF;
-            color: #000000;
+            background: #F8FAFC;
+            color: #1E293B;
+            font-size: 14px; /* Medida estándar cómoda */
         }
-        .dark body { background: #000000; color: #FFFFFF; }
+        .dark body { background: #020617; color: #E2E8F0; }
+
+        /* Ajuste para evitar textos blancos puros */
+        .text-white { color: #F8FAFC !important; }
+        .dark .text-white { color: #F1F5F9 !important; }
 
         .glass-card {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.7);
             backdrop-filter: blur(20px);
-            border: 1px solid rgba(0, 149, 255, 0.1);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(30, 64, 175, 0.1);
         }
 
-        .neon-border-gold { border: 1px solid rgba(0, 149, 255, 0.3); box-shadow: 0 0 20px rgba(0, 149, 255, 0.05); }
-        
         .text-vivid-gradient {
-            background: linear-gradient(to right, #000000, #0095FF, #005FB8);
+            background: linear-gradient(to right, #1E3A8A, #2563EB, #1D4ED8);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-        .dark .text-vivid-gradient {
-            background: linear-gradient(to right, #FFFFFF, #0095FF, #00C2FF);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .animate-float {
-            animation: float 6s ease-in-out infinite;
-        }
-        @keyframes float {
-            0% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-            100% { transform: translateY(0px); }
-        }
-
-        .custom-loader {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: conic-gradient(#0000 10%, #0095FF);
-            -webkit-mask: radial-gradient(farthest-side, #0000 calc(100% - 8px), #000 0);
-            animation: s3 1s infinite linear;
-        }
-        @keyframes s3 { to { transform: rotate(1turn); } }
-
-        .gold-glow {
-            box-shadow: 0 0 30px rgba(0, 149, 255, 0.2);
-        }
-        .text-gold-gradient {
-            background: linear-gradient(to br, #0095FF, #FFFFFF);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #005FB8;
-            border-radius: 10px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #0095FF;
-        }
-
-        /* Estilos especÃ­ficos para asegurar legibilidad en blanco/negro/azul */
-        .bg-primary { background-color: #0095FF !important; }
-        .text-primary { color: #0095FF !important; }
-        .border-primary { border-color: #0095FF !important; }
         
-        .bg-secondary { background-color: #000000 !important; color: #FFFFFF !important; }
-        .text-secondary { color: #0095FF !important; }
+        /* Normalización de tamaños de texto para legibilidad */
+        .text-tiny { font-size: 0.75rem; line-height: 1rem; } /* 12px mínimo */
         
-        .dark .bg-secondary { background-color: #FFFFFF !important; color: #000000 !important; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E40AF; border-radius: 10px; }
+
+        .bg-primary { background-color: #1E40AF !important; }
+        .text-primary { color: #1E40AF !important; }
     </style>
+<script type="importmap">
+{
+  "imports": {
+    "recharts": "https://esm.sh/recharts@^3.7.0",
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "react": "https://esm.sh/react@^19.2.4",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/"
+  }
+}
+</script>
 </head>
 <body class="transition-all duration-700">
     <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
 </body>
 </html>
