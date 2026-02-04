@@ -14,11 +14,11 @@
             theme: {
                 extend: {
                     colors: {
-                        "primary": "#0EA5E9", // Azul Cielo (Sky 500)
+                        "primary": "#0095FF", // Azul Eléctrico Vibrante (Más claro y vivo)
                         "secondary": "#000000", // Negro
-                        "vibrant-pink": "#0369A1", // Azul oscuro (Sky 700)
+                        "vibrant-pink": "#005FB8", // Azul Profundo (Para dar ese toque "oscuro" y profesional)
                         "vibrant-cyan": "#FFFFFF", // Blanco
-                        "vibrant-green": "#0EA5E9",
+                        "vibrant-green": "#0095FF",
                         "midnight": "#000000",
                         "card-dark": "#0F0F0F"
                     },
@@ -31,7 +31,7 @@
                         "5xl": "3.5rem"
                     },
                     boxShadow: {
-                        "premium": "0 25px 50px -12px rgba(14, 165, 233, 0.15)"
+                        "premium": "0 25px 50px -12px rgba(0, 149, 255, 0.15)"
                     }
                 }
             }
@@ -53,19 +53,19 @@
         .glass-card {
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(20px);
-            border: 1px solid rgba(14, 165, 233, 0.1);
+            border: 1px solid rgba(0, 149, 255, 0.1);
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3);
         }
 
-        .neon-border-gold { border: 1px solid rgba(14, 165, 233, 0.3); box-shadow: 0 0 20px rgba(14, 165, 233, 0.05); }
+        .neon-border-gold { border: 1px solid rgba(0, 149, 255, 0.3); box-shadow: 0 0 20px rgba(0, 149, 255, 0.05); }
         
         .text-vivid-gradient {
-            background: linear-gradient(to right, #000000, #0EA5E9, #0369A1);
+            background: linear-gradient(to right, #000000, #0095FF, #005FB8);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
         .dark .text-vivid-gradient {
-            background: linear-gradient(to right, #FFFFFF, #0EA5E9, #7DD3FC);
+            background: linear-gradient(to right, #FFFFFF, #0095FF, #00C2FF);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -83,17 +83,17 @@
             width: 50px;
             height: 50px;
             border-radius: 50%;
-            background: conic-gradient(#0000 10%, #0EA5E9);
+            background: conic-gradient(#0000 10%, #0095FF);
             -webkit-mask: radial-gradient(farthest-side, #0000 calc(100% - 8px), #000 0);
             animation: s3 1s infinite linear;
         }
         @keyframes s3 { to { transform: rotate(1turn); } }
 
         .gold-glow {
-            box-shadow: 0 0 30px rgba(14, 165, 233, 0.2);
+            box-shadow: 0 0 30px rgba(0, 149, 255, 0.2);
         }
         .text-gold-gradient {
-            background: linear-gradient(to br, #0EA5E9, #FFFFFF);
+            background: linear-gradient(to br, #0095FF, #FFFFFF);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -105,20 +105,20 @@
             background: transparent;
         }
         ::-webkit-scrollbar-thumb {
-            background: #0369A1;
+            background: #005FB8;
             border-radius: 10px;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: #0EA5E9;
+            background: #0095FF;
         }
 
-        /* Estilos específicos para asegurar legibilidad en blanco/negro/azul cielo */
-        .bg-primary { background-color: #0EA5E9 !important; }
-        .text-primary { color: #0EA5E9 !important; }
-        .border-primary { border-color: #0EA5E9 !important; }
+        /* Estilos específicos para asegurar legibilidad en blanco/negro/azul */
+        .bg-primary { background-color: #0095FF !important; }
+        .text-primary { color: #0095FF !important; }
+        .border-primary { border-color: #0095FF !important; }
         
         .bg-secondary { background-color: #000000 !important; color: #FFFFFF !important; }
-        .text-secondary { color: #0EA5E9 !important; }
+        .text-secondary { color: #0095FF !important; }
         
         .dark .bg-secondary { background-color: #FFFFFF !important; color: #000000 !important; }
     </style>
