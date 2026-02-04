@@ -1,4 +1,4 @@
-
+import { createClient } from '@supabase/supabase-js'
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -14,6 +14,11 @@ import RawData from './components/RawData';
 import DirectorProfileModal from './components/DirectorProfileModal';
 import { ViewType, Member, AttendanceRecord, Event, User, Role, ChoirData } from './types';
 import { CHOIR_DATA, INITIAL_EVENTS, INITIAL_MEMBERS } from './constants';
+
+// --- CONFIGURACIÓN DE SUPABASE ---
+const supabaseUrl = 'https://nlfzzchyeflxvmnwbtsr.supabase.co'
+const supabaseKey = 'sb_publishable_ATzSIJf-if8qMZVGMkqCWg_qYjJpcen'
+const supabase = createClient(supabaseUrl, supabaseKey)
 
 const APP_STORAGE_KEY = 'umbral_analitica_v3_core';
 const syncChannel = new BroadcastChannel('umbral_sync_channel');
@@ -63,7 +68,6 @@ const App: React.FC = () => {
 
   const isInitialized = useRef(false);
 
-  // Estados maestros con carga desde persistencia
   const [user, setUser] = useState<User | null>(() => Persistence.load('session', null));
   const [choirs, setChoirs] = useState<ChoirData[]>(() => Persistence.load('choirs', CHOIR_DATA));
   const [events, setEvents] = useState<Event[]>(() => Persistence.load('events', INITIAL_EVENTS));
@@ -75,12 +79,22 @@ const App: React.FC = () => {
   const [members, setMembers] = useState<Member[]>(() => Persistence.load('members', INITIAL_MEMBERS));
   const [reports, setReports] = useState<AttendanceRecord[]>(() => Persistence.load('reports', []));
 
+  // --- NUEVO: CARGAR DATOS DESDE LA NUBE AL INICIAR ---
+  useEffect(() => {
+    const loadFromCloud = async () => {
+      const { data: cloudChoirs } = await supabase.from('coros').select('*');
+      if (cloudChoirs && cloudChoirs.length > 0) {
+        setChoirs(cloudChoirs);
+      }
+    };
+    loadFromCloud();
+  }, []);
+
   useEffect(() => {
     const timer = setTimeout(() => { isInitialized.current = true; }, 100);
     return () => clearTimeout(timer);
   }, []);
 
-  // Efecto de Guardado Automático
   useEffect(() => {
     if (!isInitialized.current) return;
     Persistence.save('session', user);
@@ -98,15 +112,20 @@ const App: React.FC = () => {
     else document.documentElement.classList.remove('dark');
   }, [isDarkMode]);
 
-  const handleUpdateChoirPhoto = (choirId: string, photoUrl: string) => {
-    setChoirs(prev => prev.map(c => c.id === choirId ? { ...c, imageUrl: photoUrl } : c));
+  // --- MODIFICADO: AHORA GUARDA EN SUPABASE ---
+  const handleUpdateChoirPhoto = async (choirId: string, photoUrl: string) => {
+    const updatedChoirs = choirs.map(c => c.id === choirId ? { ...c, imageUrl: photoUrl } : c);
+    setChoirs(updatedChoirs);
+    
+    // Guardar en la nube
+    const { error } = await supabase.from('coros').upsert(updatedChoirs);
+    if (error) console.error("Error guardando en la nube:", error.message);
   };
 
   const handleUpdateProfileAvatar = (newAvatar: string) => {
     if (!user) return;
     const updatedUser = { ...user, avatar: newAvatar };
     setUser(updatedUser);
-    // Asegurar que se guarde en la lista global de directores
     setAllUsers(prev => prev.map(u => u.id === user.id ? { ...u, avatar: newAvatar } : u));
   };
 
@@ -132,64 +151,6 @@ const App: React.FC = () => {
   if (!user) return <Login onLogin={handleLogin} />;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f8fafc] dark:bg-midnight font-sans transition-colors duration-700">
-      <Sidebar 
-        currentView={(currentView === ViewType.MEMBER_PROFILE || currentView === ViewType.EVENT_DETAILS) ? previousView : currentView} 
-        setView={(view) => { if (view === ViewType.CHORUSES && user.role === Role.ADMIN) setAdminChoirFilter(null); setCurrentView(view); setIsSidebarOpen(false); }} 
-        user={user} 
-        onLogout={handleLogout}
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-        onProfileClick={() => setIsProfileModalOpen(true)}
-      />
-      
-      <main className="flex-1 overflow-y-auto relative">
-        <div className="lg:hidden p-4 bg-white dark:bg-card-dark border-b border-slate-200 dark:border-white/5 flex items-center justify-between sticky top-0 z-30 shadow-sm">
-          <div className="flex items-center gap-3">
-             <div className="size-9 bg-primary rounded-xl flex items-center justify-center text-white">
-                <span className="material-symbols-outlined text-xl">music_note</span>
-             </div>
-             <span className="font-black text-sm text-slate-900 dark:text-white uppercase tracking-tighter">EL UMBRAL</span>
-          </div>
-          <button onClick={() => setIsSidebarOpen(true)} className="size-11 bg-slate-100 dark:bg-white/5 rounded-xl flex items-center justify-center text-primary">
-            <span className="material-symbols-outlined text-2xl">menu</span>
-          </button>
-        </div>
-
-        <div className="px-4 py-6 lg:p-16 max-w-[1700px] mx-auto">
-          {currentView === ViewType.DASHBOARD && <Dashboard reports={reports} members={members} onNavigateToChoir={(cid, v) => { setAdminChoirFilter(cid); setCurrentView(v); }} onViewAllMembers={() => { setAdminChoirFilter(null); setCurrentView(ViewType.CHORUSES); }} />}
-          {currentView === ViewType.CHORUSES && (
-            <Choruses 
-              members={members} 
-              choirs={choirs}
-              reports={reports}
-              directors={allUsers.filter(u => u.role === Role.DIRECTOR)}
-              onAddMember={(m) => setMembers(prev => [...prev, m])} 
-              onDeleteMember={(id) => setMembers(prev => prev.filter(m => m.id !== id))} 
-              onUpdateChoirPhoto={handleUpdateChoirPhoto}
-              onViewMember={(m) => { setPreviousView(currentView); setSelectedMemberForProfile(m); setCurrentView(ViewType.MEMBER_PROFILE); }}
-              userRole={user.role} 
-              userChoirId={user.role === Role.ADMIN ? (adminChoirFilter || undefined) : user.choirId}
-              currentUser={user}
-            />
-          )}
-          {currentView === ViewType.REPORTS && <Reports members={members.filter(m => user.role === Role.ADMIN ? (adminChoirFilter ? m.choirId === adminChoirFilter : true) : m.choirId === user.choirId)} events={events} onSaveReport={(recs) => setReports(prev => [...prev, ...recs])} reports={reports} currentUser={user} />}
-          {currentView === ViewType.EVENTS && <Events events={events} userRole={user.role} onAddEvent={(e) => setEvents(prev => [...prev, e])} onDeleteEvent={(id) => setEvents(prev => prev.filter(e => e.id !== id))} onUpdateEvent={(e) => setEvents(prev => prev.map(ev => ev.id === e.id ? e : ev))} onViewEvent={(e) => { setPreviousView(ViewType.EVENTS); setSelectedEventForDetails(e); setCurrentView(ViewType.EVENT_DETAILS); }} />}
-          {currentView === ViewType.EVENT_DETAILS && selectedEventForDetails && <EventDetails event={selectedEventForDetails} onBack={() => setCurrentView(previousView)} />}
-          {currentView === ViewType.MEMBER_PROFILE && selectedMemberForProfile && <MemberProfile member={selectedMemberForProfile} reports={reports} events={events} choir={choirs.find(c => c.id === selectedMemberForProfile.choirId)!} onBack={() => setCurrentView(previousView)} />}
-          {currentView === ViewType.USER_MANAGEMENT && <UserManagement users={allUsers} setUsers={setAllUsers} />}
-          {currentView === ViewType.ANALYTICS && <QualityAnalytics reports={reports} choirs={choirs} members={members} events={events} userRole={user.role} />}
-          {currentView === ViewType.RAW_DATA && <RawData reports={reports} members={members} choirs={choirs} events={events} users={allUsers} onMemberClick={(m) => { setPreviousView(currentView); setSelectedMemberForProfile(m); setCurrentView(ViewType.MEMBER_PROFILE); }} />}
-        </div>
-
-        {isProfileModalOpen && user && <DirectorProfileModal user={user} onClose={() => setIsProfileModalOpen(false)} onUpdateAvatar={handleUpdateProfileAvatar} onImportData={handleImportData} onExportData={Persistence.exportData} members={members} reports={reports} choirs={choirs} />}
-
-        <button onClick={() => setIsDarkMode(!isDarkMode)} className="fixed bottom-6 right-6 size-14 bg-primary text-white rounded-2xl shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50">
-          <span className="material-symbols-outlined text-2xl font-black">{isDarkMode ? 'light_mode' : 'dark_mode'}</span>
-        </button>
-      </main>
-    </div>
-  );
-};
+    <div className="flex h-screen overflow-hidden bg-[#f8fafc] dark:bg-midnight font-
 
 export default App;
